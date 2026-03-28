@@ -1,0 +1,39 @@
+[package]
+name = "bevy_mistUI"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89.0"
+license = "MIT OR Apache-2.0"
+description = "Procedural mist and smoke-ring borders for Bevy UI."
+readme = "README.md"
+repository = "https://github.com/UlyssesLeoLee/ROPE_CS"
+homepage = "https://github.com/UlyssesLeoLee/ROPE_CS/tree/main/plugins/bevy_mistUI"
+documentation = "https://docs.rs/bevy_mistUI"
+keywords = ["bevy", "ui", "mist", "smoke", "shader"]
+include = [
+    "src/**/*",
+    "assets/**/*",
+    "examples/**/*",
+    "README.md",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+    "Cargo.toml",
+]
+
+[dependencies]
+bevy = { version = "0.18.0", default-features = false, features = [
+    "bevy_asset",
+    "bevy_core_pipeline",
+    "bevy_log",
+    "bevy_render",
+    "bevy_sprite",
+    "bevy_sprite_render",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_ui_render",
+    "bevy_window",
+    "bevy_winit",
+    "multi_threaded",
+] }
+bevy_camera = { version = "0.18.0" }
+bevy_mesh = { version = "0.18.0" }
