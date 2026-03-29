@@ -69,23 +69,41 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         min(uv.y * px.y, (1.0 - uv.y) * px.y)
     );
 
-    let band_center = material.thickness * 0.55 + fbm(p + w1 * 2.7) * material.breakup * 4.0;
-    let band_fade = material.thickness + material.softness * 0.9;
-    let outer = smoothstep(band_fade + material.softness, band_fade - material.softness, edge_dist_px);
-    let inner = smoothstep(
-        max(band_center - material.softness, 0.0),
-        band_center + material.softness,
-        edge_dist_px
-    );
-    let border_mask = clamp(outer - inner, 0.0, 1.0);
-
     let density = fbm(p + w1 * 3.5);
+    let edge_noise = fbm(p * 1.25 - w1 * 2.9 + vec2<f32>(t * 0.25, -t * 0.18));
     let wisp_t = material.time * 0.6;
     let wisp = fbm(centered * ns * 1.5 + vec2<f32>(wisp_t, -wisp_t * 0.7));
-    let smoke = density * border_mask * mix(1.0, wisp, material.breakup) * 1.4;
+    let filament = fbm(centered * ns * 2.2 + vec2<f32>(-wisp_t * 0.55, wisp_t * 0.8));
+
+    let core_thickness = material.thickness * mix(0.72, 1.32, density);
+    let plume_width = material.softness * 2.8 + material.breakup * 8.0;
+    let outer_mask = 1.0 - smoothstep(
+        core_thickness,
+        core_thickness + plume_width,
+        edge_dist_px
+    );
+    let hollow_mask = 1.0 - smoothstep(
+        0.0,
+        max(core_thickness * 0.38, 1.0),
+        edge_dist_px
+    );
+    let ring_mask = clamp(outer_mask - hollow_mask * 0.72, 0.0, 1.0);
+
+    let plume_extent =
+        core_thickness + plume_width * 1.65 + edge_noise * material.breakup * 10.0;
+    let plume_mask = 1.0 - smoothstep(
+        plume_extent,
+        plume_extent + material.softness * 5.4 + 6.0,
+        edge_dist_px
+    );
+
+    let smoke_core = ring_mask * mix(0.58, 1.0, density);
+    let smoke_plume = plume_mask * mix(0.34, 1.0, wisp) * (0.34 + material.breakup);
+    let smoke =
+        smoke_core + smoke_plume * 0.78 + ring_mask * filament * 0.22 + plume_mask * edge_noise * 0.12;
     let smoke_clamped = clamp(smoke, 0.0, 1.0);
 
-    let scatter = 1.0 + smoke_clamped * 0.25;
+    let scatter = 0.84 + smoke_core * 0.34 + smoke_plume * 0.18;
     let final_rgb = min(material.color.rgb * scatter, vec3<f32>(1.0));
     let alpha = smoke_clamped * material.color.a;
 

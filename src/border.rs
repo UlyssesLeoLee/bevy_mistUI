@@ -24,14 +24,14 @@ pub struct SmokeBorder {
 impl Default for SmokeBorder {
     fn default() -> Self {
         Self {
-            color: Color::srgb(0.9, 0.95, 1.0),
-            thickness: 0.45,
-            intensity: 1.8,
-            flow_speed: 1.0,
-            noise_scale: 28.0,
-            softness: 0.15,
-            pulse_strength: 0.45,
-            pulse_color: Color::srgb(0.6, 0.8, 1.0),
+            color: Color::srgb(0.96, 0.98, 1.0),
+            thickness: 0.16,
+            intensity: 3.0,
+            flow_speed: 0.22,
+            noise_scale: 30.0,
+            softness: 0.56,
+            pulse_strength: 0.18,
+            pulse_color: Color::srgb(0.86, 0.92, 1.0),
         }
     }
 }
@@ -71,14 +71,14 @@ impl SmokeBorder {
 
     pub fn gaseous_idle(_seed: u64) -> Self {
         Self {
-            color: Color::srgb(1.0, 1.0, 1.0),
-            pulse_color: Color::srgb(0.92, 0.96, 1.0),
-            intensity: 2.6,
-            thickness: 0.1,
-            softness: 0.4,
-            flow_speed: 0.4,
-            noise_scale: 36.0,
-            pulse_strength: 0.15,
+            color: Color::srgb(0.96, 0.985, 1.0),
+            pulse_color: Color::srgb(0.86, 0.94, 1.0),
+            intensity: 3.2,
+            thickness: 0.14,
+            softness: 0.58,
+            flow_speed: 0.24,
+            noise_scale: 30.0,
+            pulse_strength: 0.18,
         }
     }
 
@@ -95,10 +95,11 @@ impl SmokeBorder {
 
     pub fn gaseous_thick_border(seed: u64) -> Self {
         let mut border = Self::gaseous_idle(seed);
-        border.thickness = 0.35;
-        border.intensity = 5.2;
-        border.softness = 0.12;
-        border.noise_scale = 58.0;
+        border.thickness = 0.22;
+        border.intensity = 3.8;
+        border.softness = 0.50;
+        border.noise_scale = 32.0;
+        border.pulse_strength = 0.24;
         border
     }
 }
@@ -119,4 +120,3 @@ mod tests {
         assert_eq!(SmokeBorder::disabled().intensity, 0.0);
     }
 }
-

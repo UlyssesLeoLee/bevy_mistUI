@@ -58,15 +58,28 @@ impl Material2d for SmokeRingMaterial {
     }
 }
 
+impl UiMaterial for SmokeRingMaterial {
+    fn fragment_shader() -> ShaderRef {
+        ShaderRef::Handle(SMOKE_RING_UI_SHADER_HANDLE.clone())
+    }
+}
+
 pub const SMOKE_RING_SHADER_HANDLE: Handle<Shader> =
     bevy::asset::uuid_handle!("8192aff0-e1e0-43ce-a4db-912808c32493");
+pub const SMOKE_RING_UI_SHADER_HANDLE: Handle<Shader> =
+    bevy::asset::uuid_handle!("aef98f65-1b20-4d3e-8a8b-66f4c8a6ca12");
 
 const SMOKE_RING_SHADER_SRC: &str = include_str!("../assets/shaders/smoke_ring.wgsl");
+const SMOKE_RING_UI_SHADER_SRC: &str = include_str!("../assets/shaders/smoke_ring_ui.wgsl");
 
 pub fn init_smoke_ring_shader(shaders: &mut Assets<Shader>) {
     let _ = shaders.insert(
         SMOKE_RING_SHADER_HANDLE.id(),
         Shader::from_wgsl(SMOKE_RING_SHADER_SRC, "smoke_ring.wgsl"),
+    );
+    let _ = shaders.insert(
+        SMOKE_RING_UI_SHADER_HANDLE.id(),
+        Shader::from_wgsl(SMOKE_RING_UI_SHADER_SRC, "smoke_ring_ui.wgsl"),
     );
 }
 
@@ -89,6 +102,6 @@ mod tests {
         let mut shaders = Assets::<Shader>::default();
         init_smoke_ring_shader(&mut shaders);
         assert!(shaders.get(&SMOKE_RING_SHADER_HANDLE).is_some());
+        assert!(shaders.get(&SMOKE_RING_UI_SHADER_HANDLE).is_some());
     }
 }
-
