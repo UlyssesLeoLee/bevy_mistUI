@@ -757,7 +757,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_mistUI"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "bevy",
  "bevy_camera",

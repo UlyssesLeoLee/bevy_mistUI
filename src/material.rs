@@ -17,6 +17,7 @@ pub struct SmokeRingMaterial {
 pub struct SmokeRingParams {
     pub color: Vec4,
     pub rect_size: Vec2,
+    pub corner_radius: Vec4,
     pub time: f32,
     pub thickness: f32,
     pub noise_scale: f32,
@@ -30,6 +31,7 @@ impl Default for SmokeRingParams {
         Self {
             color: Vec4::new(0.85, 0.92, 1.0, 0.45),
             rect_size: Vec2::new(100.0, 100.0),
+            corner_radius: Vec4::splat(14.0),
             time: 0.0,
             thickness: 20.0,
             noise_scale: 42.0,

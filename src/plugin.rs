@@ -145,9 +145,26 @@ fn ring_ui_node(node_size: Vec2, rect_size: Vec2) -> Node {
     }
 }
 
+fn ring_corner_radius(
+    computed: Option<&ComputedNode>,
+    padding: SmokeRingPadding,
+    settings: &SmokeRingSettings,
+) -> Vec4 {
+    let expansion = padding.horizontal.max(padding.vertical)
+        + (settings.base_band_px + settings.irregularity_px) * 0.5;
+
+    if let Some(computed) = computed {
+        let radii: [f32; 4] = computed.border_radius().into();
+        Vec4::new(radii[0], radii[1], radii[2], radii[3]) + Vec4::splat(expansion)
+    } else {
+        Vec4::ZERO
+    }
+}
+
 fn material_from_smoke_border(
     smoke: &SmokeBorder,
     rect_size: Vec2,
+    corner_radius: Vec4,
     time: f32,
 ) -> SmokeRingMaterial {
     let base = smoke.color.to_linear();
@@ -161,6 +178,7 @@ fn material_from_smoke_border(
         params: SmokeRingParams {
             color: Vec4::new(rgb.x, rgb.y, rgb.z, alpha),
             rect_size,
+            corner_radius,
             time,
             thickness: (10.0 + smoke.thickness.clamp(0.05, 0.8) * 22.0).clamp(10.0, 30.0),
             noise_scale: smoke.noise_scale.clamp(10.0, 72.0),
@@ -326,7 +344,9 @@ fn sync_smoke_rings(
 
         let padding = padding.copied().unwrap_or_default();
         let rect_size = ring_rect_size(node_size, padding, &settings);
-        let next_material = material_from_smoke_border(smoke, rect_size, time.elapsed_secs());
+        let corner_radius = ring_corner_radius(computed, padding, &settings);
+        let next_material =
+            material_from_smoke_border(smoke, rect_size, corner_radius, time.elapsed_secs());
 
         match mode {
             SmokeRingShellMode::UiNode => {
@@ -449,6 +469,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.add_plugins(AssetPlugin::default());
+        app.init_asset::<Shader>();
         app.add_plugins(SmokeRingPlugin);
         assert!(app.world().contains_resource::<SmokeRingSettings>());
     }

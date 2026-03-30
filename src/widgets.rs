@@ -19,17 +19,24 @@ const CONTROL_HEIGHT: f32 = 50.0;
 const CONTROL_RADIUS: f32 = 14.0;
 const CONTROL_PADDING_X: f32 = 14.0;
 const CONTROL_PADDING_Y: f32 = 10.0;
-const SLIDER_HANDLE_WIDTH: f32 = 22.0;
-const SLIDER_HANDLE_HEIGHT: f32 = 32.0;
-const SLIDER_TRACK_HEIGHT: f32 = 10.0;
-const SLIDER_TRACK_INSET: f32 = 16.0;
+const SLIDER_HANDLE_WIDTH: f32 = 26.0;
+const SLIDER_HANDLE_HEIGHT: f32 = 36.0;
+const SLIDER_TRACK_HEIGHT: f32 = 12.0;
+const SLIDER_TRACK_INSET: f32 = 18.0;
+const SLIDER_READOUT_WIDTH: f32 = 50.0;
+const SLIDER_READOUT_HEIGHT: f32 = 22.0;
+const SLIDER_ENDCAP_WIDTH: f32 = 8.0;
+const SLIDER_ENDCAP_HEIGHT: f32 = 18.0;
 const PROGRESS_LERP_RATE: f32 = 6.0;
 const SWITCH_TRACK_WIDTH: f32 = 54.0;
 const SWITCH_TRACK_HEIGHT: f32 = 28.0;
 const SWITCH_KNOB_SIZE: f32 = 22.0;
 const SCROLL_STEP_PX: f32 = 36.0;
-const SCROLLBAR_WIDTH: f32 = 10.0;
-const SCROLLBAR_MIN_THUMB_HEIGHT: f32 = 30.0;
+const SCROLLBAR_WIDTH: f32 = 14.0;
+const SCROLLBAR_MIN_THUMB_HEIGHT: f32 = 34.0;
+const SCROLLBAR_PROGRESS_INSET: f32 = 3.0;
+const SCROLLBAR_CORE_WIDTH: f32 = 4.0;
+const SCROLLBAR_CORE_HEIGHT: f32 = 18.0;
 
 fn clamp_choice_index(len: usize, index: usize) -> usize {
     index.min(len.saturating_sub(1))
@@ -349,14 +356,14 @@ fn smoke_config_for_role(role: MistSmokeRole, pressed: bool) -> MistSmokeConfig 
 
 fn checkbox_indicator_smoke_config(checked: bool) -> MistSmokeConfig {
     let mut smoke = MistSmokeConfig::screen_preset(MistSmokePreset::DropdownOption);
-    smoke.thickness = if checked { 0.15 } else { 0.13 };
-    smoke.intensity = if checked { 5.25 } else { 4.60 };
-    smoke.softness = if checked { 0.21 } else { 0.19 };
-    smoke.flow_speed = if checked { 1.38 } else { 1.24 };
+    smoke.thickness = if checked { 0.17 } else { 0.15 };
+    smoke.intensity = if checked { 5.70 } else { 5.05 };
+    smoke.softness = if checked { 0.22 } else { 0.20 };
+    smoke.flow_speed = if checked { 1.42 } else { 1.30 };
     smoke.noise_scale = 20.0;
-    smoke.pulse_strength = if checked { 0.15 } else { 0.10 };
-    smoke.particle_density = if checked { 3.72 } else { 3.28 };
-    smoke.particle_size_scale = if checked { 0.68 } else { 0.62 };
+    smoke.pulse_strength = if checked { 0.16 } else { 0.12 };
+    smoke.particle_density = if checked { 4.05 } else { 3.62 };
+    smoke.particle_size_scale = if checked { 0.70 } else { 0.66 };
     smoke
 }
 
@@ -765,6 +772,53 @@ fn trigger_interactive_style() -> MistInteractiveStyle {
     }
 }
 
+fn trigger_fill(open: bool, interaction: Interaction) -> Color {
+    match (open, interaction) {
+        (false, Interaction::None) => Color::srgba(0.01, 0.03, 0.06, 0.02),
+        (false, Interaction::Hovered) => Color::srgba(0.02, 0.05, 0.09, 0.04),
+        (false, Interaction::Pressed) => Color::srgba(0.03, 0.07, 0.12, 0.06),
+        (true, Interaction::None) => Color::srgba(0.02, 0.05, 0.08, 0.05),
+        (true, Interaction::Hovered) => Color::srgba(0.03, 0.07, 0.11, 0.07),
+        (true, Interaction::Pressed) => Color::srgba(0.04, 0.09, 0.14, 0.10),
+    }
+}
+
+fn trigger_edge_state(open: bool, interaction: Interaction) -> MistEdgeState {
+    match interaction {
+        Interaction::Pressed => MistEdgeState::Pressed,
+        Interaction::Hovered => MistEdgeState::Hovered,
+        Interaction::None if open => MistEdgeState::Hovered,
+        Interaction::None => MistEdgeState::Idle,
+    }
+}
+
+fn trigger_surface_state(open: bool, interaction: Interaction) -> MistSurfaceState {
+    match interaction {
+        Interaction::Pressed => MistSurfaceState::Pressed,
+        Interaction::Hovered => MistSurfaceState::Active,
+        Interaction::None if open => MistSurfaceState::Active,
+        Interaction::None => MistSurfaceState::Idle,
+    }
+}
+
+fn trigger_ring_smoke(open: bool, interaction: Interaction) -> MistSmokeConfig {
+    let mut smoke = smoke_config_for_edge_state(
+        MistSmokeRole::TriggerButton,
+        trigger_edge_state(open, interaction),
+    );
+    if open {
+        smoke.thickness = (smoke.thickness + 0.04).clamp(0.18, 0.34);
+        smoke.intensity = (smoke.intensity * 1.10).clamp(2.0, 7.4);
+        smoke.particle_density = (smoke.particle_density * 1.12).clamp(1.0, 5.5);
+        smoke.softness = (smoke.softness + 0.03).clamp(0.18, 0.42);
+        smoke.pulse_strength = (smoke.pulse_strength + 0.04).clamp(0.10, 0.34);
+    } else {
+        smoke.thickness = (smoke.thickness * 0.92).clamp(0.12, 0.26);
+        smoke.intensity = (smoke.intensity * 0.96).clamp(1.6, 6.0);
+    }
+    smoke
+}
+
 fn data_item_interactive_style() -> MistInteractiveStyle {
     MistInteractiveStyle {
         idle_fill: Color::srgba(0.01, 0.03, 0.05, 0.05),
@@ -804,6 +858,18 @@ pub struct MistButton;
 
 #[derive(Component)]
 pub struct MistTrigger;
+
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct MistTriggerState {
+    pub open: bool,
+}
+
+#[derive(Component, Clone, Copy, Debug)]
+pub struct MistTriggerParts {
+    tag: Entity,
+    chevron: Entity,
+    chevron_text: Entity,
+}
 
 #[derive(Component)]
 pub struct MistCheckbox;
@@ -878,7 +944,9 @@ pub struct MistScrollParts {
     pub viewport: Entity,
     pub content: Entity,
     pub track: Entity,
+    pub progress: Entity,
     pub thumb: Entity,
+    pub thumb_core: Entity,
 }
 
 #[derive(Component, Clone, Copy, Debug)]
@@ -910,6 +978,8 @@ pub struct MistSliderParts {
     track: Entity,
     fill: Entity,
     handle: Entity,
+    beacon: Entity,
+    beacon_core: Entity,
 }
 
 #[derive(Component, Clone, Copy, Debug)]
@@ -1471,6 +1541,15 @@ impl Plugin for MistUiSmokeHostPlugin {
                 relax_smoke_host_clipping,
                 sync_interactive_styles,
                 sync_interactive_smoke_borders,
+                sync_checkbox_visuals
+                    .after(sync_interactive_styles)
+                    .after(sync_interactive_smoke_borders)
+                    .after(toggle_checkboxes),
+                sync_trigger_visuals
+                    .after(sync_interactive_styles)
+                    .after(sync_interactive_smoke_borders)
+                    .after(toggle_triggers)
+                    .after(sync_dropdown_trigger_states),
             ),
         );
     }
@@ -1491,7 +1570,8 @@ impl Plugin for MistUiSelectionPlugin {
         app.add_systems(
             Update,
             (
-                (toggle_checkboxes, sync_checkbox_visuals).chain(),
+                toggle_triggers,
+                toggle_checkboxes,
                 (select_radio_items, sync_radio_visuals).chain(),
                 (toggle_switches, sync_switch_visuals).chain(),
                 (
@@ -1499,6 +1579,7 @@ impl Plugin for MistUiSelectionPlugin {
                     select_dropdown_items,
                     close_dropdowns_on_outside_click,
                     sync_dropdowns,
+                    sync_dropdown_trigger_states,
                 )
                     .chain(),
                 (select_tabs, sync_tabs).chain(),
@@ -1763,9 +1844,10 @@ pub fn spawn_mist_trigger(
     let root = commands
         .spawn((
             MistTrigger,
+            MistTriggerState::default(),
             Button,
             MistSmokeRole::TriggerButton,
-            surface_smoke_for_widget_role(MistSmokeRole::TriggerButton, false),
+            surface_smoke_for_role_state(MistSmokeSurfaceRole::ControlBody, MistSurfaceState::Idle),
             trigger_interactive_style(),
             smoke_border_for_role(MistSmokeRole::TriggerButton, false, 2),
             smoke_padding_for_role(MistSmokeRole::TriggerButton),
@@ -1780,7 +1862,7 @@ pub fn spawn_mist_trigger(
                 border_radius: BorderRadius::all(Val::Px(CONTROL_RADIUS + 4.0)),
                 ..default()
             },
-            BackgroundColor(control_fill()),
+            BackgroundColor(trigger_fill(false, Interaction::None)),
             BorderColor::all(Color::NONE),
         ))
         .id();
@@ -1813,6 +1895,9 @@ pub fn spawn_mist_trigger(
             children![text_line(font, &label, 20.0, text_primary())],
         ))
         .id();
+    let chevron_text = commands
+        .spawn(text_line(font, ">>", 16.0, text_primary()))
+        .id();
     let chevron = commands
         .spawn((
             Node {
@@ -1826,13 +1911,18 @@ pub fn spawn_mist_trigger(
             surface_smoke_for_role(MistSmokeSurfaceRole::AccentOrb, true),
             BackgroundColor(Color::NONE),
             BorderColor::all(Color::NONE),
-            children![text_line(font, ">>", 16.0, text_primary())],
         ))
         .id();
+    commands.entity(chevron).add_child(chevron_text);
 
     commands
         .entity(root)
         .add_children(&[tag, label_node, chevron]);
+    commands.entity(root).insert(MistTriggerParts {
+        tag,
+        chevron,
+        chevron_text,
+    });
     root
 }
 
@@ -1882,10 +1972,10 @@ pub fn spawn_mist_checkbox(
             MistSmokeRole::DropdownOption,
             indicator_smoke,
             derived_screen_ring(indicator_smoke),
-            SmokeRingPadding::all(2.0),
+            SmokeRingPadding::all(3.0),
             Node {
-                width: Val::Px(26.0),
-                height: Val::Px(26.0),
+                width: Val::Px(28.0),
+                height: Val::Px(28.0),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
                 border: UiRect::all(Val::Px(0.0)),
@@ -2186,14 +2276,33 @@ pub fn spawn_mist_scroll_view(
             MistSmokeRole::ScalarControl,
             surface_smoke_for_role(MistSmokeSurfaceRole::ScalarTrack, true),
             smoke_border_for_role(MistSmokeRole::ScalarControl, false, 412),
-            SmokeRingPadding::all(2.0),
+            SmokeRingPadding::all(3.0),
             Node {
                 position_type: PositionType::Absolute,
-                right: Val::Px(10.0),
-                top: Val::Px(10.0),
-                bottom: Val::Px(10.0),
+                right: Val::Px(8.0),
+                top: Val::Px(8.0),
+                bottom: Val::Px(8.0),
                 width: Val::Px(SCROLLBAR_WIDTH),
                 border_radius: BorderRadius::all(Val::Px(SCROLLBAR_WIDTH * 0.5)),
+                ..default()
+            },
+            BackgroundColor(Color::NONE),
+            BorderColor::all(Color::NONE),
+        ))
+        .id();
+    let progress = commands
+        .spawn((
+            MistSmokeRole::ToolbarButton,
+            surface_smoke_for_role(MistSmokeSurfaceRole::ScalarFill, false),
+            smoke_border_for_role(MistSmokeRole::ToolbarButton, false, 414),
+            SmokeRingPadding::all(1.5),
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(SCROLLBAR_PROGRESS_INSET),
+                right: Val::Px(SCROLLBAR_PROGRESS_INSET),
+                top: Val::Px(SCROLLBAR_PROGRESS_INSET),
+                height: Val::Px(0.0),
+                border_radius: BorderRadius::all(Val::Px(4.0)),
                 ..default()
             },
             BackgroundColor(Color::NONE),
@@ -2206,8 +2315,8 @@ pub fn spawn_mist_scroll_view(
             MistScrollThumb,
             MistSmokeRole::ToolbarButton,
             surface_smoke_for_role(MistSmokeSurfaceRole::ScalarFill, true),
-            smoke_border_for_role(MistSmokeRole::ToolbarButton, false, 413),
-            SmokeRingPadding::all(2.0),
+            smoke_border_for_role(MistSmokeRole::ToolbarButton, true, 413),
+            SmokeRingPadding::all(3.0),
             Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(0.0),
@@ -2215,21 +2324,39 @@ pub fn spawn_mist_scroll_view(
                 top: Val::Px(0.0),
                 height: Val::Px(46.0),
                 border_radius: BorderRadius::all(Val::Px(SCROLLBAR_WIDTH * 0.5)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
                 ..default()
             },
             BackgroundColor(Color::NONE),
             BorderColor::all(Color::NONE),
         ))
         .id();
+    let thumb_core = commands
+        .spawn((
+            Node {
+                width: Val::Px(SCROLLBAR_CORE_WIDTH),
+                height: Val::Px(SCROLLBAR_CORE_HEIGHT),
+                border_radius: BorderRadius::all(Val::Px(2.0)),
+                ..default()
+            },
+            surface_smoke_for_role(MistSmokeSurfaceRole::AccentChip, true),
+            BackgroundColor(Color::NONE),
+            BorderColor::all(Color::NONE),
+        ))
+        .id();
 
     commands.entity(viewport).add_child(content);
-    commands.entity(track).add_child(thumb);
+    commands.entity(thumb).add_child(thumb_core);
+    commands.entity(track).add_children(&[progress, thumb]);
     commands.entity(root).add_children(&[viewport, track]);
     commands.entity(root).insert(MistScrollParts {
         viewport,
         content,
         track,
+        progress,
         thumb,
+        thumb_core,
     });
 
     (root, content)
@@ -2251,7 +2378,7 @@ pub fn spawn_mist_slider(commands: &mut Commands, width: f32, value: f32) -> Ent
             smoke_padding_for_role(MistSmokeRole::ScalarControl),
             Node {
                 width: Val::Px(width),
-                min_height: Val::Px(40.0),
+                min_height: Val::Px(52.0),
                 position_type: PositionType::Relative,
                 border: UiRect::all(Val::Px(0.0)),
                 border_radius: BorderRadius::all(Val::Px(18.0)),
@@ -2267,7 +2394,7 @@ pub fn spawn_mist_slider(commands: &mut Commands, width: f32, value: f32) -> Ent
                 position_type: PositionType::Absolute,
                 left: Val::Px(SLIDER_TRACK_INSET),
                 right: Val::Px(SLIDER_TRACK_INSET),
-                top: Val::Px(15.0),
+                top: Val::Px(20.0),
                 height: Val::Px(SLIDER_TRACK_HEIGHT),
                 justify_content: JustifyContent::SpaceEvenly,
                 align_items: AlignItems::Center,
@@ -2295,6 +2422,19 @@ pub fn spawn_mist_slider(commands: &mut Commands, width: f32, value: f32) -> Ent
             BackgroundColor(Color::NONE),
         ))
         .id();
+    let left_cap = commands
+        .spawn((
+            Node {
+                width: Val::Px(SLIDER_ENDCAP_WIDTH),
+                height: Val::Px(SLIDER_ENDCAP_HEIGHT),
+                border_radius: BorderRadius::all(Val::Px(3.0)),
+                ..default()
+            },
+            surface_smoke_for_role(MistSmokeSurfaceRole::AccentChip, true),
+            BackgroundColor(Color::NONE),
+            BorderColor::all(Color::NONE),
+        ))
+        .id();
     let mid_tick = commands
         .spawn((
             Node {
@@ -2308,6 +2448,19 @@ pub fn spawn_mist_slider(commands: &mut Commands, width: f32, value: f32) -> Ent
             BorderColor::all(Color::NONE),
         ))
         .id();
+    let right_cap = commands
+        .spawn((
+            Node {
+                width: Val::Px(SLIDER_ENDCAP_WIDTH),
+                height: Val::Px(SLIDER_ENDCAP_HEIGHT),
+                border_radius: BorderRadius::all(Val::Px(3.0)),
+                ..default()
+            },
+            surface_smoke_for_role(MistSmokeSurfaceRole::AccentChip, true),
+            BackgroundColor(Color::NONE),
+            BorderColor::all(Color::NONE),
+        ))
+        .id();
 
     let handle = commands
         .spawn((
@@ -2317,7 +2470,7 @@ pub fn spawn_mist_slider(commands: &mut Commands, width: f32, value: f32) -> Ent
                     SLIDER_TRACK_INSET
                         + t * (width - SLIDER_TRACK_INSET * 2.0 - SLIDER_HANDLE_WIDTH),
                 ),
-                top: Val::Px(4.0),
+                top: Val::Px(8.0),
                 width: Val::Px(SLIDER_HANDLE_WIDTH),
                 height: Val::Px(SLIDER_HANDLE_HEIGHT),
                 justify_content: JustifyContent::Center,
@@ -2326,6 +2479,37 @@ pub fn spawn_mist_slider(commands: &mut Commands, width: f32, value: f32) -> Ent
                 ..default()
             },
             surface_smoke_for_role(MistSmokeSurfaceRole::AccentOrb, true),
+            BackgroundColor(Color::NONE),
+            BorderColor::all(Color::NONE),
+        ))
+        .id();
+    let beacon = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(-12.0),
+                top: Val::Px(-22.0),
+                min_width: Val::Px(SLIDER_READOUT_WIDTH),
+                min_height: Val::Px(SLIDER_READOUT_HEIGHT),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                border_radius: BorderRadius::all(Val::Px(8.0)),
+                ..default()
+            },
+            surface_smoke_for_role(MistSmokeSurfaceRole::AccentChip, t > 0.01),
+            BackgroundColor(Color::NONE),
+            BorderColor::all(Color::NONE),
+        ))
+        .id();
+    let beacon_core = commands
+        .spawn((
+            Node {
+                width: Val::Px(22.0),
+                height: Val::Px(6.0),
+                border_radius: BorderRadius::all(Val::Px(3.0)),
+                ..default()
+            },
+            surface_smoke_for_role(MistSmokeSurfaceRole::AccentOrb, t > 0.01),
             BackgroundColor(Color::NONE),
             BorderColor::all(Color::NONE),
         ))
@@ -2344,13 +2528,19 @@ pub fn spawn_mist_slider(commands: &mut Commands, width: f32, value: f32) -> Ent
         ))
         .id();
 
+    commands.entity(beacon).add_child(beacon_core);
+    commands.entity(handle).add_child(beacon);
     commands.entity(handle).add_child(handle_core);
-    commands.entity(track).add_children(&[fill, mid_tick]);
+    commands
+        .entity(track)
+        .add_children(&[fill, left_cap, mid_tick, right_cap]);
     commands.entity(root).add_children(&[track, handle]);
     commands.entity(root).insert(MistSliderParts {
         track,
         fill,
         handle,
+        beacon,
+        beacon_core,
     });
     root
 }
@@ -2421,7 +2611,7 @@ pub fn spawn_mist_input_field(
                 width: Val::Px(width),
                 min_height: Val::Px(CONTROL_HEIGHT),
                 padding: UiRect::axes(Val::Px(CONTROL_PADDING_X), Val::Px(CONTROL_PADDING_Y)),
-                column_gap: Val::Px(8.0),
+                column_gap: Val::Px(10.0),
                 align_items: AlignItems::Center,
                 border: UiRect::all(Val::Px(0.0)),
                 border_radius: BorderRadius::all(Val::Px(CONTROL_RADIUS)),
@@ -2430,6 +2620,31 @@ pub fn spawn_mist_input_field(
             BackgroundColor(control_fill()),
             BorderColor::all(Color::NONE),
         ))
+        .id();
+    let prefix_tag = commands
+        .spawn((
+            Node {
+                min_width: Val::Px(42.0),
+                min_height: Val::Px(26.0),
+                padding: UiRect::axes(Val::Px(8.0), Val::Px(5.0)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                border_radius: BorderRadius::all(Val::Px(9.0)),
+                ..default()
+            },
+            surface_smoke_for_role(MistSmokeSurfaceRole::AccentChip, true),
+            BackgroundColor(Color::NONE),
+            BorderColor::all(Color::NONE),
+            children![text_line(font, "IN", 12.0, text_secondary())],
+        ))
+        .id();
+    let value_lane = commands
+        .spawn((Node {
+            flex_grow: 1.0,
+            column_gap: Val::Px(6.0),
+            align_items: AlignItems::Center,
+            ..default()
+        },))
         .id();
 
     let placeholder_text = commands
@@ -2453,8 +2668,11 @@ pub fn spawn_mist_input_field(
         .id();
 
     commands
-        .entity(root)
+        .entity(value_lane)
         .add_children(&[placeholder_text, value_text, caret]);
+    commands
+        .entity(root)
+        .add_children(&[prefix_tag, value_lane]);
     commands.entity(root).insert(MistInputParts {
         value_text,
         placeholder_text,
@@ -2732,38 +2950,82 @@ pub fn spawn_mist_dropdown(
     let trigger = commands
         .spawn((
             MistTrigger,
+            MistTriggerState::default(),
             MistDropdownTrigger,
             MistDropdownOwner(root),
             Button,
             MistSmokeRole::TriggerButton,
-            surface_smoke_for_widget_role(MistSmokeRole::TriggerButton, false),
+            surface_smoke_for_role_state(MistSmokeSurfaceRole::ControlBody, MistSurfaceState::Idle),
             trigger_interactive_style(),
             smoke_border_for_role(MistSmokeRole::TriggerButton, false, 7),
             smoke_padding_for_role(MistSmokeRole::TriggerButton),
             Node {
                 width: Val::Percent(100.0),
                 min_height: Val::Px(CONTROL_HEIGHT),
-                padding: UiRect::axes(Val::Px(CONTROL_PADDING_X), Val::Px(CONTROL_PADDING_Y)),
+                padding: UiRect::axes(Val::Px(12.0), Val::Px(CONTROL_PADDING_Y)),
                 justify_content: JustifyContent::SpaceBetween,
                 align_items: AlignItems::Center,
+                column_gap: Val::Px(12.0),
                 border: UiRect::all(Val::Px(0.0)),
-                border_radius: BorderRadius::all(Val::Px(CONTROL_RADIUS)),
+                border_radius: BorderRadius::all(Val::Px(CONTROL_RADIUS + 2.0)),
                 ..default()
             },
-            BackgroundColor(control_fill()),
+            BackgroundColor(trigger_fill(false, Interaction::None)),
             BorderColor::all(Color::NONE),
+        ))
+        .id();
+    let tag = commands
+        .spawn((
+            Node {
+                min_width: Val::Px(48.0),
+                min_height: Val::Px(26.0),
+                padding: UiRect::axes(Val::Px(9.0), Val::Px(5.0)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                border_radius: BorderRadius::all(Val::Px(9.0)),
+                ..default()
+            },
+            surface_smoke_for_role(MistSmokeSurfaceRole::AccentChip, true),
+            BackgroundColor(Color::NONE),
+            BorderColor::all(Color::NONE),
+            children![text_line(font, "SEL", 12.0, text_secondary())],
         ))
         .id();
 
     let label_text = commands
         .spawn(text_line(font, "", 18.0, text_primary()))
         .id();
-    let chevron = commands
-        .spawn(text_line(font, "v", 18.0, text_secondary()))
+    commands.entity(label_text).insert(Node {
+        flex_grow: 1.0,
+        ..default()
+    });
+    let chevron_text = commands
+        .spawn(text_line(font, ">>", 16.0, text_secondary()))
         .id();
+    let chevron = commands
+        .spawn((
+            Node {
+                min_width: Val::Px(30.0),
+                min_height: Val::Px(28.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                border_radius: BorderRadius::all(Val::Px(10.0)),
+                ..default()
+            },
+            surface_smoke_for_role(MistSmokeSurfaceRole::AccentOrb, true),
+            BackgroundColor(Color::NONE),
+            BorderColor::all(Color::NONE),
+        ))
+        .id();
+    commands.entity(chevron).add_child(chevron_text);
     commands
         .entity(trigger)
-        .add_children(&[label_text, chevron]);
+        .add_children(&[tag, label_text, chevron]);
+    commands.entity(trigger).insert(MistTriggerParts {
+        tag,
+        chevron,
+        chevron_text,
+    });
 
     let menu = commands
         .spawn((
@@ -2771,15 +3033,15 @@ pub fn spawn_mist_dropdown(
             surface_smoke_for_widget_role(MistSmokeRole::PanelFrame, false),
             Node {
                 position_type: PositionType::Absolute,
-                top: Val::Px(CONTROL_HEIGHT + 4.0),
+                top: Val::Px(CONTROL_HEIGHT + 18.0),
                 left: Val::Px(0.0),
-                width: Val::Percent(100.0),
-                padding: UiRect::all(Val::Px(8.0)),
+                right: Val::Px(0.0),
+                padding: UiRect::all(Val::Px(12.0)),
                 flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(6.0),
+                row_gap: Val::Px(10.0),
                 display: Display::None,
                 border: UiRect::all(Val::Px(0.0)),
-                border_radius: BorderRadius::all(Val::Px(16.0)),
+                border_radius: BorderRadius::all(Val::Px(18.0)),
                 ..default()
             },
             smoke_border_for_role(MistSmokeRole::PanelFrame, false, 8),
@@ -2808,8 +3070,9 @@ pub fn spawn_mist_dropdown(
                 smoke_padding_for_role(MistSmokeRole::DropdownOption),
                 Node {
                     width: Val::Percent(100.0),
-                    min_height: Val::Px(34.0),
-                    justify_content: JustifyContent::Center,
+                    min_height: Val::Px(40.0),
+                    padding: UiRect::axes(Val::Px(14.0), Val::Px(9.0)),
+                    justify_content: JustifyContent::FlexStart,
                     align_items: AlignItems::Center,
                     border: UiRect::all(Val::Px(0.0)),
                     border_radius: BorderRadius::all(Val::Px(10.0)),
@@ -3815,6 +4078,88 @@ fn emit_trigger_pressed(
     }
 }
 
+fn toggle_triggers(
+    mut query: Query<
+        (&Interaction, &mut MistTriggerState),
+        (
+            Changed<Interaction>,
+            With<MistTrigger>,
+            Without<MistDropdownTrigger>,
+        ),
+    >,
+) {
+    for (interaction, mut state) in &mut query {
+        if *interaction == Interaction::Pressed {
+            state.open = !state.open;
+        }
+    }
+}
+
+fn sync_dropdown_trigger_states(
+    dropdowns: Query<&MistDropdown>,
+    mut triggers: Query<(&MistDropdownOwner, &mut MistTriggerState), With<MistDropdownTrigger>>,
+) {
+    for (owner, mut state) in &mut triggers {
+        let Ok(dropdown) = dropdowns.get(owner.0) else {
+            continue;
+        };
+        if state.open != dropdown.open {
+            state.open = dropdown.open;
+        }
+    }
+}
+
+fn sync_trigger_visuals(
+    query: Query<
+        (Entity, &MistTriggerState, &MistTriggerParts, &Interaction),
+        Or<(
+            Changed<MistTriggerState>,
+            Changed<Interaction>,
+            Added<MistTriggerState>,
+        )>,
+    >,
+    mut backgrounds: Query<&mut BackgroundColor>,
+    mut smoke_configs: Query<&mut MistSmokeConfig>,
+    mut borders: Query<&mut SmokeBorder>,
+    mut surfaces: Query<&mut MistSmokeSurface>,
+    mut texts: Query<&mut Text>,
+) {
+    for (entity, state, parts, interaction) in &query {
+        if let Ok(mut background) = backgrounds.get_mut(entity) {
+            background.0 = trigger_fill(state.open, *interaction);
+        }
+        let edge_smoke = trigger_ring_smoke(state.open, *interaction);
+        if let Ok(mut smoke_config) = smoke_configs.get_mut(entity) {
+            *smoke_config = edge_smoke;
+        }
+        if let Ok(mut border) = borders.get_mut(entity) {
+            *border = derived_screen_ring(edge_smoke);
+        }
+        if let Ok(mut root_surface) = surfaces.get_mut(entity) {
+            *root_surface = surface_smoke_for_role_state(
+                MistSmokeSurfaceRole::ControlBody,
+                trigger_surface_state(state.open, *interaction),
+            );
+        }
+        if let Ok(mut tag_surface) = surfaces.get_mut(parts.tag) {
+            *tag_surface = surface_smoke_for_role(
+                MistSmokeSurfaceRole::AccentChip,
+                state.open || *interaction != Interaction::None,
+            );
+        }
+        if let Ok(mut chevron_surface) = surfaces.get_mut(parts.chevron) {
+            *chevron_surface = surface_smoke_for_role(
+                MistSmokeSurfaceRole::AccentOrb,
+                state.open || *interaction != Interaction::None,
+            );
+        }
+        if let Ok(mut chevron_text) = texts.get_mut(parts.chevron_text) {
+            chevron_text.clear();
+            chevron_text.push_str(if state.open { "<<" } else { ">>" });
+        }
+    }
+}
+
 fn toggle_checkboxes(
     mut query: Query<
         (Entity, &Interaction, &mut MistCheckboxState),
@@ -3836,18 +4181,52 @@ fn toggle_checkboxes(
 
 fn sync_checkbox_visuals(
     query: Query<
-        (&MistCheckboxState, &MistCheckboxParts),
-        Or<(Changed<MistCheckboxState>, Added<MistCheckboxState>)>,
+        (Entity, &Interaction, &MistCheckboxState, &MistCheckboxParts),
+        Or<(
+            Changed<MistCheckboxState>,
+            Added<MistCheckboxState>,
+            Changed<Interaction>,
+        )>,
     >,
+    mut backgrounds: Query<&mut BackgroundColor>,
     mut surfaces: Query<&mut MistSmokeSurface>,
     mut smoke_configs: Query<&mut MistSmokeConfig>,
     mut borders: Query<&mut SmokeBorder>,
     mut text_query: Query<&mut Text>,
 ) {
-    for (state, parts) in &query {
+    for (entity, interaction, state, parts) in &query {
         let indicator_smoke = checkbox_indicator_smoke_config(state.checked);
+        if let Ok(mut background) = backgrounds.get_mut(entity) {
+            background.0 = match (state.checked, *interaction) {
+                (false, Interaction::None) => control_fill(),
+                (false, Interaction::Hovered) => hovered_fill(),
+                (false, Interaction::Pressed) => pressed_fill(),
+                (true, Interaction::None) => Color::srgba(0.08, 0.14, 0.20, 0.22),
+                (true, Interaction::Hovered) => Color::srgba(0.10, 0.17, 0.24, 0.28),
+                (true, Interaction::Pressed) => Color::srgba(0.12, 0.20, 0.28, 0.34),
+            };
+        }
+        let edge_state = match *interaction {
+            Interaction::Pressed => MistEdgeState::Pressed,
+            Interaction::Hovered => MistEdgeState::Hovered,
+            Interaction::None if state.checked => MistEdgeState::Hovered,
+            Interaction::None => MistEdgeState::Idle,
+        };
+        let root_smoke = smoke_config_for_edge_state(MistSmokeRole::StandardButton, edge_state);
+        if let Ok(mut root_surface) = surfaces.get_mut(entity) {
+            *root_surface = surface_smoke_for_role(
+                MistSmokeSurfaceRole::ControlBody,
+                state.checked || *interaction != Interaction::None,
+            );
+        }
+        if let Ok(mut root_smoke_config) = smoke_configs.get_mut(entity) {
+            *root_smoke_config = root_smoke;
+        }
+        if let Ok(mut root_border) = borders.get_mut(entity) {
+            *root_border = derived_screen_ring(root_smoke);
+        }
         if let Ok(mut surface) = surfaces.get_mut(parts.indicator) {
-            *surface = surface_smoke_for_role(MistSmokeSurfaceRole::AccentChip, state.checked);
+            *surface = surface_smoke_for_role(MistSmokeSurfaceRole::AccentChip, true);
         }
         if let Ok(mut smoke_config) = smoke_configs.get_mut(parts.indicator) {
             *smoke_config = indicator_smoke;
@@ -3940,6 +4319,7 @@ fn sync_scrollbar_visuals(
             (scroll_position.0.y / max_offset).clamp(0.0, 1.0)
         };
         let thumb_top = (track_h - thumb_h).max(0.0) * progress;
+        let progress_h = (thumb_top + thumb_h * 0.5).clamp(0.0, track_h);
         let scrollable = max_offset > 2.0;
 
         if let Ok(mut thumb_node) = nodes.get_mut(parts.thumb) {
@@ -3951,18 +4331,63 @@ fn sync_scrollbar_visuals(
                 Display::None
             };
         }
+        if let Ok(mut progress_node) = nodes.get_mut(parts.progress) {
+            progress_node.height = Val::Px(progress_h);
+            progress_node.display = if scrollable && progress_h > 2.0 {
+                Display::Flex
+            } else {
+                Display::None
+            };
+        }
 
         if let Ok(mut track_surface) = surfaces.get_mut(parts.track) {
             *track_surface = surface_smoke_for_role(MistSmokeSurfaceRole::ScalarTrack, scrollable);
         }
+        if let Ok(mut progress_surface) = surfaces.get_mut(parts.progress) {
+            *progress_surface = surface_smoke_for_role(
+                MistSmokeSurfaceRole::ScalarFill,
+                scrollable && progress > 0.01,
+            );
+        }
         if let Ok(mut thumb_surface) = surfaces.get_mut(parts.thumb) {
             *thumb_surface = surface_smoke_for_role(MistSmokeSurfaceRole::ScalarFill, scrollable);
         }
+        if let Ok(mut thumb_core_surface) = surfaces.get_mut(parts.thumb_core) {
+            *thumb_core_surface =
+                surface_smoke_for_role(MistSmokeSurfaceRole::AccentChip, scrollable);
+        }
         if let Ok(mut track_border) = borders.get_mut(parts.track) {
-            *track_border = smoke_border_for_role(MistSmokeRole::ScalarControl, scrollable, 412);
+            *track_border = smoke_border_for_role_state(
+                MistSmokeRole::ScalarControl,
+                if scrollable {
+                    MistEdgeState::Hovered
+                } else {
+                    MistEdgeState::Idle
+                },
+                412,
+            );
+        }
+        if let Ok(mut progress_border) = borders.get_mut(parts.progress) {
+            *progress_border = smoke_border_for_role_state(
+                MistSmokeRole::ToolbarButton,
+                if scrollable && progress > 0.01 {
+                    MistEdgeState::Hovered
+                } else {
+                    MistEdgeState::Idle
+                },
+                414,
+            );
         }
         if let Ok(mut thumb_border) = borders.get_mut(parts.thumb) {
-            *thumb_border = smoke_border_for_role(MistSmokeRole::ToolbarButton, scrollable, 413);
+            *thumb_border = smoke_border_for_role_state(
+                MistSmokeRole::ToolbarButton,
+                if scrollable {
+                    MistEdgeState::Pressed
+                } else {
+                    MistEdgeState::Idle
+                },
+                413,
+            );
         }
     }
 }
@@ -4194,6 +4619,14 @@ fn sync_slider_visuals(
         }
         if let Ok(mut handle_surface) = surfaces.get_mut(parts.handle) {
             *handle_surface = surface_smoke_for_role(MistSmokeSurfaceRole::AccentOrb, true);
+        }
+        if let Ok(mut beacon_surface) = surfaces.get_mut(parts.beacon) {
+            *beacon_surface =
+                surface_smoke_for_role(MistSmokeSurfaceRole::AccentChip, normalized > 0.01);
+        }
+        if let Ok(mut beacon_core_surface) = surfaces.get_mut(parts.beacon_core) {
+            *beacon_core_surface =
+                surface_smoke_for_role(MistSmokeSurfaceRole::AccentOrb, normalized > 0.01);
         }
         if let Ok(mut handle) = nodes.get_mut(parts.handle) {
             let usable = (node.size().x - SLIDER_TRACK_INSET * 2.0 - SLIDER_HANDLE_WIDTH).max(0.0);
@@ -5206,6 +5639,85 @@ mod tests {
     }
 
     #[test]
+    fn trigger_open_state_drives_persistent_fill_and_chevron() {
+        let mut app = App::new();
+        app.add_plugins((
+            MinimalPlugins,
+            bevy::input::InputPlugin,
+            AssetPlugin::default(),
+        ));
+        app.add_plugins(MistUiPlugin);
+
+        let font = Handle::<Font>::default();
+        let trigger = {
+            let mut queue = CommandQueue::default();
+            let mut commands = Commands::new(&mut queue, app.world_mut());
+            let trigger = spawn_mist_trigger(&mut commands, &font, "Open", 180.0);
+            queue.apply(app.world_mut());
+            trigger
+        };
+
+        app.update();
+
+        let closed_fill = app
+            .world()
+            .entity(trigger)
+            .get::<BackgroundColor>()
+            .expect("trigger fill should exist")
+            .0;
+        let closed_border = app
+            .world()
+            .entity(trigger)
+            .get::<SmokeBorder>()
+            .expect("trigger border should exist")
+            .clone();
+        let parts = *app
+            .world()
+            .entity(trigger)
+            .get::<MistTriggerParts>()
+            .expect("trigger parts should exist");
+
+        {
+            let mut entity = app.world_mut().entity_mut(trigger);
+            let mut state = entity
+                .get_mut::<MistTriggerState>()
+                .expect("trigger state should exist");
+            state.open = true;
+        }
+        app.update();
+
+        let open_fill = app
+            .world()
+            .entity(trigger)
+            .get::<BackgroundColor>()
+            .expect("trigger fill should still exist")
+            .0;
+        let open_border = app
+            .world()
+            .entity(trigger)
+            .get::<SmokeBorder>()
+            .expect("trigger border should still exist")
+            .clone();
+        let root_surface = app
+            .world()
+            .entity(trigger)
+            .get::<MistSmokeSurface>()
+            .expect("trigger surface should exist");
+        let chevron = app
+            .world()
+            .entity(parts.chevron_text)
+            .get::<Text>()
+            .expect("trigger chevron text should exist");
+
+        assert!(open_fill.alpha() > closed_fill.alpha());
+        assert!(open_fill.alpha() <= 0.10);
+        assert!(open_border.thickness > closed_border.thickness);
+        assert!(open_border.intensity >= closed_border.intensity);
+        assert!(root_surface.config.intensity >= 2.0);
+        assert_eq!(chevron.as_str(), "<<");
+    }
+
+    #[test]
     fn checkbox_indicator_has_its_own_smoke_runtime() {
         let mut app = App::new();
         app.add_plugins((
@@ -5256,8 +5768,9 @@ mod tests {
             .world()
             .entity(parts.indicator)
             .contains::<MistSmokeTarget>());
-        assert!(config.particle_density >= 3.2);
-        assert!(config.flow_speed >= 1.2);
+        assert!(config.particle_density >= 4.0);
+        assert!(config.flow_speed >= 1.4);
+        assert!(config.thickness >= 0.17);
     }
 
     #[test]
@@ -5331,12 +5844,20 @@ mod tests {
             .contains::<MistSmokeSurface>());
         assert!(app
             .world()
+            .entity(parts.progress)
+            .contains::<MistSmokeSurface>());
+        assert!(app
+            .world()
             .entity(parts.thumb)
             .contains::<MistScrollThumb>());
         assert!(app.world().entity(parts.thumb).contains::<SmokeBorder>());
         assert!(app
             .world()
             .entity(parts.thumb)
+            .contains::<MistSmokeSurface>());
+        assert!(app
+            .world()
+            .entity(parts.thumb_core)
             .contains::<MistSmokeSurface>());
     }
 
@@ -5369,6 +5890,14 @@ mod tests {
             .world()
             .entity(parts.track)
             .contains::<MistSmokeSurface>());
+        assert!(app
+            .world()
+            .entity(parts.beacon)
+            .contains::<MistSmokeSurface>());
+        assert!(app
+            .world()
+            .entity(parts.beacon_core)
+            .contains::<MistSmokeSurface>());
         let handle = app
             .world()
             .entity(parts.handle)
@@ -5376,6 +5905,59 @@ mod tests {
             .expect("handle node should exist");
         assert_eq!(handle.height, Val::Px(SLIDER_HANDLE_HEIGHT));
         assert_eq!(handle.width, Val::Px(SLIDER_HANDLE_WIDTH));
+    }
+
+    #[test]
+    fn dropdown_popup_uses_detached_popup_layout() {
+        let mut app = App::new();
+        app.add_plugins((
+            MinimalPlugins,
+            bevy::input::InputPlugin,
+            AssetPlugin::default(),
+        ));
+        app.add_plugins(MistUiPlugin);
+
+        let font = Handle::<Font>::default();
+        let dropdown = {
+            let mut queue = CommandQueue::default();
+            let mut commands = Commands::new(&mut queue, app.world_mut());
+            let dropdown = spawn_mist_dropdown(&mut commands, &font, 220.0, ["English", "中文"]);
+            queue.apply(app.world_mut());
+            dropdown
+        };
+
+        app.update();
+
+        let parts = *app
+            .world()
+            .entity(dropdown)
+            .get::<MistDropdownParts>()
+            .expect("dropdown parts should exist");
+        let menu = app
+            .world()
+            .entity(parts.menu)
+            .get::<Node>()
+            .expect("dropdown menu node should exist");
+        assert_eq!(menu.position_type, PositionType::Absolute);
+        assert_eq!(menu.top, Val::Px(CONTROL_HEIGHT + 18.0));
+        assert_eq!(menu.left, Val::Px(0.0));
+        assert_eq!(menu.right, Val::Px(0.0));
+
+        let first_item = app
+            .world()
+            .entity(parts.menu)
+            .get::<Children>()
+            .expect("dropdown menu children should exist")
+            .first()
+            .copied()
+            .expect("dropdown menu should spawn items");
+        let item = app
+            .world()
+            .entity(first_item)
+            .get::<Node>()
+            .expect("dropdown item node should exist");
+        assert_eq!(item.min_height, Val::Px(40.0));
+        assert_eq!(item.justify_content, JustifyContent::FlexStart);
     }
 
     #[test]

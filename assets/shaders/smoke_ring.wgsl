@@ -3,6 +3,7 @@
 struct SmokeParams {
     color: vec4<f32>,
     rect_size: vec2<f32>,
+    corner_radius: vec4<f32>,
     time: f32,
     thickness: f32,
     noise_scale: f32,
@@ -49,6 +50,26 @@ fn fbm(p: vec2<f32>) -> f32 {
     return v / norm;
 }
 
+fn corner_radius_for_point(radii: vec4<f32>, p: vec2<f32>) -> f32 {
+    if p.x >= 0.0 {
+        if p.y >= 0.0 {
+            return radii.z;
+        }
+        return radii.y;
+    }
+    if p.y >= 0.0 {
+        return radii.w;
+    }
+    return radii.x;
+}
+
+fn rounded_rect_sdf(p: vec2<f32>, half_extent: vec2<f32>, radii: vec4<f32>) -> f32 {
+    let max_radius = max(0.0, min(half_extent.x, half_extent.y) - 1.0);
+    let radius = clamp(corner_radius_for_point(radii, p), 0.0, max_radius);
+    let q = abs(p) - (half_extent - vec2<f32>(radius, radius));
+    return length(max(q, vec2<f32>(0.0))) + min(max(q.x, q.y), 0.0) - radius;
+}
+
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
@@ -64,10 +85,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let px = max(material.rect_size, vec2<f32>(1.0));
     let half_extent = px * 0.5;
-    let edge_dist_px = min(
-        min(uv.x * px.x, (1.0 - uv.x) * px.x),
-        min(uv.y * px.y, (1.0 - uv.y) * px.y)
-    );
+    let sdf = rounded_rect_sdf(centered * px, half_extent, material.corner_radius);
+    let inside_depth = max(-sdf, 0.0);
+    let outside_depth = max(sdf, 0.0);
 
     let density = fbm(p + w1 * 3.5);
     let edge_noise = fbm(p * 1.25 - w1 * 2.9 + vec2<f32>(t * 0.25, -t * 0.18));
@@ -77,30 +97,36 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let core_thickness = material.thickness * mix(0.72, 1.32, density);
     let plume_width = material.softness * 2.8 + material.breakup * 8.0;
-    let outer_mask = 1.0 - smoothstep(
-        core_thickness,
-        core_thickness + plume_width,
-        edge_dist_px
-    );
-    let hollow_mask = 1.0 - smoothstep(
-        0.0,
-        max(core_thickness * 0.38, 1.0),
-        edge_dist_px
-    );
-    let ring_mask = clamp(outer_mask - hollow_mask * 0.72, 0.0, 1.0);
+    let boundary_offset = (edge_noise - 0.5) * material.breakup * 10.0;
+    let shell_dist = abs(sdf - boundary_offset);
 
-    let plume_extent =
-        core_thickness + plume_width * 1.65 + edge_noise * material.breakup * 10.0;
+    let core_mask = 1.0 - smoothstep(
+        core_thickness * 0.22,
+        core_thickness + plume_width * 0.70,
+        shell_dist
+    );
     let plume_mask = 1.0 - smoothstep(
-        plume_extent,
-        plume_extent + material.softness * 5.4 + 6.0,
-        edge_dist_px
+        core_thickness * 0.55,
+        core_thickness + plume_width * 1.85,
+        shell_dist
+    );
+    let inside_fade = 1.0 - smoothstep(
+        core_thickness * 1.10 + plume_width * 0.20,
+        core_thickness * 3.80 + plume_width * 1.60,
+        inside_depth
+    );
+    let outside_fade = 1.0 - smoothstep(
+        plume_width * 0.70,
+        plume_width * 2.10 + 10.0,
+        outside_depth
     );
 
-    let smoke_core = ring_mask * mix(0.58, 1.0, density);
-    let smoke_plume = plume_mask * mix(0.34, 1.0, wisp) * (0.34 + material.breakup);
+    let smoke_core = core_mask * mix(0.62, 1.0, density);
+    let smoke_plume = plume_mask * mix(0.28, 1.0, wisp) * (0.28 + material.breakup);
     let smoke =
-        smoke_core + smoke_plume * 0.78 + ring_mask * filament * 0.22 + plume_mask * edge_noise * 0.12;
+        (smoke_core + smoke_plume * 0.82 + plume_mask * filament * 0.20 + plume_mask * edge_noise * 0.12)
+        * inside_fade
+        * outside_fade;
     let smoke_clamped = clamp(smoke, 0.0, 1.0);
 
     let scatter = 0.84 + smoke_core * 0.34 + smoke_plume * 0.18;

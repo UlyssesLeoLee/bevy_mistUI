@@ -1070,16 +1070,15 @@ fn build_core_controls_page(commands: &mut Commands, page: Entity, font: &Handle
         .entity(button_card)
         .add_children(&[trigger, button]);
 
-    let dropdown_card = sample_frame(commands, grid, "Dropdown", font);
-    let dropdown = spawn_mist_dropdown(commands, font, 220.0, ["English", "中文", "日本語"]);
-    commands.entity(dropdown).insert((
-        GalleryWidget,
-        MistDropdown {
-            open: true,
-            selected: 0,
-        },
-    ));
-    commands.entity(dropdown_card).add_child(dropdown);
+    let dropdown_card = sample_frame_with_size(commands, grid, "Dropdown", font, 392.0, 312.0);
+    spawn_dropdown_showcase_stack(
+        commands,
+        dropdown_card,
+        font,
+        240.0,
+        214.0,
+        Some("子选项作为独立浮层下探，展示位要提前让开，不能贴着母体 trigger 发生重叠。"),
+    );
 
     let input_card = sample_frame(commands, grid, "Input", font);
     let input = spawn_mist_input_field(
@@ -1230,12 +1229,10 @@ fn build_overlay_page(
     commands: &mut Commands,
     page: Entity,
     font: &Handle<Font>,
-    view_mode: GalleryViewMode,
+    _view_mode: GalleryViewMode,
 ) -> Entity {
-    if view_mode.visual_mock {
-        let visual_mock = spawn_visual_mock_board(commands, page, font);
-        commands.entity(visual_mock).insert(GalleryWidget);
-    }
+    let visual_mock = spawn_visual_mock_board(commands, page, font);
+    commands.entity(visual_mock).insert(GalleryWidget);
 
     let grid = spawn_gallery_grid(commands, page);
 
@@ -1421,8 +1418,8 @@ fn spawn_visual_mock_board(commands: &mut Commands, parent: Entity, font: &Handl
         parent,
         "Visual Mock / Target Audit",
         font,
-        802.0,
-        236.0,
+        1180.0,
+        430.0,
     );
 
     let layout = commands
@@ -1438,9 +1435,9 @@ fn spawn_visual_mock_board(commands: &mut Commands, parent: Entity, font: &Handl
     let mock_stage = commands
         .spawn((Node {
             flex_grow: 1.0,
-            min_height: Val::Px(176.0),
+            min_height: Val::Px(364.0),
             flex_direction: FlexDirection::Column,
-            row_gap: Val::Px(12.0),
+            row_gap: Val::Px(18.0),
             ..default()
         },))
         .id();
@@ -1453,22 +1450,66 @@ fn spawn_visual_mock_board(commands: &mut Commands, parent: Entity, font: &Handl
             ..default()
         },))
         .id();
+    let middle_row = commands
+        .spawn((Node {
+            width: Val::Percent(100.0),
+            column_gap: Val::Px(12.0),
+            align_items: AlignItems::Center,
+            ..default()
+        },))
+        .id();
+    let dropdown_row = commands
+        .spawn((Node {
+            width: Val::Percent(100.0),
+            min_height: Val::Px(206.0),
+            column_gap: Val::Px(18.0),
+            align_items: AlignItems::Start,
+            ..default()
+        },))
+        .id();
 
     let trigger = spawn_mist_trigger(commands, font, "LANG", 126.0);
     let button = spawn_mist_button(commands, font, "MENU", 126.0);
-    let dropdown = spawn_mist_dropdown(commands, font, 220.0, ["English", "中文"]);
+    let input = spawn_mist_input_field(
+        commands,
+        font,
+        260.0,
+        MistInputField::new("pilot@rope.dev").with_value("pilot@rope.dev"),
+    );
+    let checkbox = spawn_mist_checkbox(commands, font, "Armed route", true);
+    let slider = spawn_mist_slider(commands, 260.0, 0.68);
+    let dropdown_copy = commands
+        .spawn((
+            Node {
+                width: Val::Px(320.0),
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(8.0),
+                ..default()
+            },
+            children![
+                text_line(font, "Dropdown popup should detach", 18.0, Color::srgba(0.97, 0.99, 1.0, 0.98)),
+                text_block(
+                    font,
+                    "子选项面板应与母体 trigger 留出明确垂直间距，同时页面布局也要给展开态留位，避免看起来像贴在一起。",
+                    15.0,
+                    Color::srgba(0.82, 0.88, 0.96, 0.96),
+                ),
+            ],
+        ))
+        .id();
     commands.entity(trigger).insert(GalleryWidget);
     commands.entity(button).insert(GalleryWidget);
-    commands.entity(dropdown).insert((
-        GalleryWidget,
-        MistDropdown {
-            open: true,
-            selected: 0,
-        },
-    ));
+    commands.entity(input).insert(GalleryWidget);
+    commands.entity(checkbox).insert(GalleryWidget);
+    commands.entity(slider).insert(GalleryWidget);
     commands
         .entity(top_row)
-        .add_children(&[trigger, button, dropdown]);
+        .add_children(&[trigger, button, input]);
+    commands
+        .entity(middle_row)
+        .add_children(&[checkbox, slider]);
+    spawn_dropdown_showcase_stack(commands, dropdown_row, font, 240.0, 196.0, None);
+    commands.entity(dropdown_row).add_child(dropdown_copy);
 
     let lower_panel = commands.spawn((GalleryWidget, mist_panel())).id();
     commands.entity(lower_panel).insert(Node {
@@ -1495,7 +1536,7 @@ fn spawn_visual_mock_board(commands: &mut Commands, parent: Entity, font: &Handl
 
     commands
         .entity(mock_stage)
-        .add_children(&[top_row, lower_panel]);
+        .add_children(&[top_row, middle_row, dropdown_row, lower_panel]);
 
     let criteria = commands
         .spawn((Node {
@@ -1514,7 +1555,7 @@ fn spawn_visual_mock_board(commands: &mut Commands, parent: Entity, font: &Handl
         ));
         parent.spawn(text_block(
             font,
-            "1. 文字之外没有稳定实线框。\n2. 轮廓是旋转的烟团，不是均匀描边。\n3. 下拉母体和子菜单都保留黑体 + 烟边语言。\n4. Hover / Press 通过烟团变厚、变密来反馈。\n5. 按 Digit2 后若看到僵硬 ring，说明你在看 fallback，不是目标态。",
+            "1. 不看文字也能凭轮廓认出 trigger / input / checkbox / slider / dropdown。\n2. 轮廓是旋转烟团，不是均匀描边。\n3. Shader ring 必须是透明圆角边界，不能出现半透明方块底。\n4. Dropdown 子菜单与母体之间保持清晰垂直间距，不覆盖母体按钮。\n5. Hover / Press 反馈应主要来自烟团厚度、密度和内部腔体变化。",
             15.0,
             Color::srgba(0.82, 0.88, 0.96, 0.96),
         ));
@@ -1525,6 +1566,50 @@ fn spawn_visual_mock_board(commands: &mut Commands, parent: Entity, font: &Handl
         .add_children(&[mock_stage, criteria]);
     commands.entity(card).add_child(layout);
     card
+}
+
+fn spawn_dropdown_showcase_stack(
+    commands: &mut Commands,
+    parent: Entity,
+    font: &Handle<Font>,
+    width: f32,
+    reserved_height: f32,
+    caption: Option<&str>,
+) -> Entity {
+    let shell = commands
+        .spawn((Node {
+            width: Val::Px(width),
+            min_height: Val::Px(reserved_height),
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(10.0),
+            ..default()
+        },))
+        .id();
+    commands.entity(parent).add_child(shell);
+
+    let dropdown = spawn_mist_dropdown(commands, font, width, ["English", "中文", "日本語"]);
+    commands.entity(dropdown).insert((
+        GalleryWidget,
+        MistDropdown {
+            open: true,
+            selected: 0,
+        },
+    ));
+    commands.entity(shell).add_child(dropdown);
+
+    if let Some(caption) = caption {
+        let copy = commands
+            .spawn(text_block(
+                font,
+                caption,
+                15.0,
+                Color::srgba(0.80, 0.88, 0.96, 0.94),
+            ))
+            .id();
+        commands.entity(shell).add_child(copy);
+    }
+
+    shell
 }
 
 fn handle_gallery_paging_input(

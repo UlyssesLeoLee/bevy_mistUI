@@ -1,8 +1,5 @@
 use crate::{
-    particles::SmokeParticlesPlugin,
-    plugin::MistSmokeBackend,
-    theme::MistTheme,
-    SmokeRingPlugin,
+    particles::SmokeParticlesPlugin, plugin::MistSmokeBackend, theme::MistTheme, SmokeRingPlugin,
 };
 use bevy::{app::PluginGroupBuilder, prelude::*};
 
@@ -183,12 +180,13 @@ impl PluginGroup for MistUiPlugins {
 mod tests {
     use super::*;
     use crate::{MistSmokeBackend, MistSmokeBudget, MistTheme};
-    use bevy::asset::AssetPlugin;
+    use bevy::{asset::AssetPlugin, shader::Shader};
 
     #[test]
     fn plugin_group_registers_smoke_backend_and_budget() {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()));
+        app.init_asset::<Shader>();
         app.add_plugins(MistUiPlugins);
 
         assert_eq!(
